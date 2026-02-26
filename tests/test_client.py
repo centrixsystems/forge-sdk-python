@@ -92,6 +92,54 @@ def test_no_quantize_when_unset():
     assert "quantize" not in payload
 
 
+def test_pdf_payload():
+    client = ForgeClient("http://localhost:3000")
+    builder = (
+        client.render_html("<h1>Invoice</h1>")
+        .format(OutputFormat.PDF)
+        .pdf_title("Invoice #1234")
+        .pdf_author("Centrix ERP")
+        .pdf_subject("Monthly billing")
+        .pdf_keywords("invoice,billing,2026")
+        .pdf_creator("forge-sdk-python")
+        .pdf_bookmarks(True)
+    )
+    payload = builder._build_payload()
+
+    p = payload["pdf"]
+    assert p["title"] == "Invoice #1234"
+    assert p["author"] == "Centrix ERP"
+    assert p["subject"] == "Monthly billing"
+    assert p["keywords"] == "invoice,billing,2026"
+    assert p["creator"] == "forge-sdk-python"
+    assert p["bookmarks"] is True
+
+
+def test_pdf_partial_payload():
+    client = ForgeClient("http://localhost:3000")
+    builder = (
+        client.render_html("<h1>Report</h1>")
+        .pdf_title("Report")
+        .pdf_bookmarks(False)
+    )
+    payload = builder._build_payload()
+
+    p = payload["pdf"]
+    assert p["title"] == "Report"
+    assert p["bookmarks"] is False
+    assert "author" not in p
+    assert "subject" not in p
+    assert "keywords" not in p
+    assert "creator" not in p
+
+
+def test_no_pdf_when_unset():
+    client = ForgeClient("http://localhost:3000")
+    builder = client.render_html("<p>test</p>").format(OutputFormat.PDF)
+    payload = builder._build_payload()
+    assert "pdf" not in payload
+
+
 def test_enum_values():
     assert OutputFormat.PDF.value == "pdf"
     assert OutputFormat.PNG.value == "png"

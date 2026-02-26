@@ -97,6 +97,23 @@ img = await client.render_html("<h1>Brand</h1>") \
     .send()
 ```
 
+### PDF Metadata
+
+Embed document metadata and enable bookmark/outline generation in PDF output.
+
+```python
+pdf = await client.render_html("<h1>Invoice #1234</h1>") \
+    .format(OutputFormat.PDF) \
+    .paper("a4") \
+    .pdf_title("Invoice #1234") \
+    .pdf_author("Centrix ERP") \
+    .pdf_subject("Monthly billing") \
+    .pdf_keywords("invoice,billing,2026") \
+    .pdf_creator("forge-sdk-python") \
+    .pdf_bookmarks(True) \
+    .send()
+```
+
 ### Health Check
 
 ```python
@@ -162,6 +179,12 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `colors` | `int` | Quantization color count (2-256) |
 | `palette` | `Palette \| list[str]` | Color palette preset or list of hex strings |
 | `dither` | `DitherMethod` | Dithering algorithm |
+| `pdf_title` | `str` | PDF document title metadata |
+| `pdf_author` | `str` | PDF document author metadata |
+| `pdf_subject` | `str` | PDF document subject metadata |
+| `pdf_keywords` | `str` | PDF keywords (comma-separated) |
+| `pdf_creator` | `str` | PDF creator tool metadata |
+| `pdf_bookmarks` | `bool` | Enable PDF bookmarks/outline generation |
 
 ### Enums
 

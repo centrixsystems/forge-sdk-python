@@ -136,6 +136,12 @@ class RenderRequestBuilder:
         self._colors: int | None = None
         self._palette: Union[Palette, list[str], None] = None
         self._dither: DitherMethod | None = None
+        self._pdf_title: str | None = None
+        self._pdf_author: str | None = None
+        self._pdf_subject: str | None = None
+        self._pdf_keywords: str | None = None
+        self._pdf_creator: str | None = None
+        self._pdf_bookmarks: bool | None = None
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -205,6 +211,36 @@ class RenderRequestBuilder:
         self._dither = method
         return self
 
+    def pdf_title(self, t: str) -> RenderRequestBuilder:
+        """PDF document title metadata."""
+        self._pdf_title = t
+        return self
+
+    def pdf_author(self, a: str) -> RenderRequestBuilder:
+        """PDF document author metadata."""
+        self._pdf_author = a
+        return self
+
+    def pdf_subject(self, s: str) -> RenderRequestBuilder:
+        """PDF document subject metadata."""
+        self._pdf_subject = s
+        return self
+
+    def pdf_keywords(self, k: str) -> RenderRequestBuilder:
+        """PDF document keywords (comma-separated)."""
+        self._pdf_keywords = k
+        return self
+
+    def pdf_creator(self, c: str) -> RenderRequestBuilder:
+        """PDF creator tool metadata."""
+        self._pdf_creator = c
+        return self
+
+    def pdf_bookmarks(self, b: bool) -> RenderRequestBuilder:
+        """Enable or disable PDF bookmarks/outline generation."""
+        self._pdf_bookmarks = b
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -248,6 +284,30 @@ class RenderRequestBuilder:
             if self._dither is not None:
                 q["dither"] = self._dither.value
             payload["quantize"] = q
+
+        has_pdf = (
+            self._pdf_title is not None
+            or self._pdf_author is not None
+            or self._pdf_subject is not None
+            or self._pdf_keywords is not None
+            or self._pdf_creator is not None
+            or self._pdf_bookmarks is not None
+        )
+        if has_pdf:
+            p: dict = {}
+            if self._pdf_title is not None:
+                p["title"] = self._pdf_title
+            if self._pdf_author is not None:
+                p["author"] = self._pdf_author
+            if self._pdf_subject is not None:
+                p["subject"] = self._pdf_subject
+            if self._pdf_keywords is not None:
+                p["keywords"] = self._pdf_keywords
+            if self._pdf_creator is not None:
+                p["creator"] = self._pdf_creator
+            if self._pdf_bookmarks is not None:
+                p["bookmarks"] = self._pdf_bookmarks
+            payload["pdf"] = p
 
         return payload
 
