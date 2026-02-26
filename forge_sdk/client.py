@@ -2,34 +2,84 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence, Union
+from typing import Sequence, Union
 
 import httpx
 
 from forge_sdk.error import ForgeConnectionError, ForgeServerError
 from forge_sdk.types import DitherMethod, Flow, Orientation, OutputFormat, Palette
 
-if TYPE_CHECKING:
-    pass
-
 
 class ForgeClient:
     """Client for a Forge rendering server.
 
-    Usage::
+    Maintains a connection pool for efficient request reuse. Use as a context
+    manager for proper cleanup, or call :meth:`close` when done.
+
+    Async usage::
+
+        async with ForgeClient("http://localhost:3000") as client:
+            pdf = await client.render_html("<h1>Hello</h1>").format(OutputFormat.PDF).send()
+
+    Sync usage::
+
+        with ForgeClient("http://localhost:3000") as client:
+            pdf = client.render_html("<h1>Hello</h1>").format(OutputFormat.PDF).send_sync()
+
+    Without context manager::
 
         client = ForgeClient("http://localhost:3000")
-
-        # Async
-        pdf = await client.render_html("<h1>Hello</h1>").format(OutputFormat.PDF).send()
-
-        # Sync
         pdf = client.render_html("<h1>Hello</h1>").format(OutputFormat.PDF).send_sync()
+        client.close()
     """
 
     def __init__(self, base_url: str, *, timeout: float = 120.0) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        self._sync_client: httpx.Client | None = None
+        self._async_client: httpx.AsyncClient | None = None
+
+    def _get_sync_client(self) -> httpx.Client:
+        if self._sync_client is None or self._sync_client.is_closed:
+            self._sync_client = httpx.Client(timeout=self._timeout)
+        return self._sync_client
+
+    def _get_async_client(self) -> httpx.AsyncClient:
+        if self._async_client is None or self._async_client.is_closed:
+            self._async_client = httpx.AsyncClient(timeout=self._timeout)
+        return self._async_client
+
+    def close(self) -> None:
+        """Close underlying HTTP connections."""
+        if self._sync_client is not None and not self._sync_client.is_closed:
+            self._sync_client.close()
+        if self._async_client is not None and not self._async_client.is_closed:
+            # Can't await in sync context; best-effort close.
+            try:
+                import asyncio
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._async_client.aclose())
+            except RuntimeError:
+                pass
+
+    async def aclose(self) -> None:
+        """Close underlying HTTP connections (async)."""
+        if self._async_client is not None and not self._async_client.is_closed:
+            await self._async_client.aclose()
+        if self._sync_client is not None and not self._sync_client.is_closed:
+            self._sync_client.close()
+
+    def __enter__(self) -> ForgeClient:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    async def __aenter__(self) -> ForgeClient:
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        await self.aclose()
 
     def render_html(self, html: str) -> RenderRequestBuilder:
         """Start a render request from an HTML string."""
@@ -42,18 +92,16 @@ class ForgeClient:
     async def health(self) -> bool:
         """Check if the server is healthy (async)."""
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                resp = await client.get(f"{self._base_url}/health")
-                return resp.status_code == 200
+            resp = await self._get_async_client().get(f"{self._base_url}/health")
+            return resp.status_code == 200
         except httpx.HTTPError:
             return False
 
     def health_sync(self) -> bool:
         """Check if the server is healthy (sync)."""
         try:
-            with httpx.Client(timeout=self._timeout) as client:
-                resp = client.get(f"{self._base_url}/health")
-                return resp.status_code == 200
+            resp = self._get_sync_client().get(f"{self._base_url}/health")
+            return resp.status_code == 200
         except httpx.HTTPError:
             return False
 
@@ -62,6 +110,7 @@ class RenderRequestBuilder:
     """Builder for a render request.
 
     Created via :meth:`ForgeClient.render_html` or :meth:`ForgeClient.render_url`.
+    Call :meth:`send` (async) or :meth:`send_sync` (sync) to execute.
     """
 
     def __init__(
@@ -206,10 +255,9 @@ class RenderRequestBuilder:
         """Send the render request and return raw output bytes (async)."""
         payload = self._build_payload()
         try:
-            async with httpx.AsyncClient(timeout=self._client._timeout) as client:
-                resp = await client.post(
-                    f"{self._client._base_url}/render", json=payload
-                )
+            resp = await self._client._get_async_client().post(
+                f"{self._client._base_url}/render", json=payload
+            )
         except httpx.HTTPError as e:
             raise ForgeConnectionError(e) from e
 
@@ -227,10 +275,9 @@ class RenderRequestBuilder:
         """Send the render request and return raw output bytes (sync)."""
         payload = self._build_payload()
         try:
-            with httpx.Client(timeout=self._client._timeout) as client:
-                resp = client.post(
-                    f"{self._client._base_url}/render", json=payload
-                )
+            resp = self._client._get_sync_client().post(
+                f"{self._client._base_url}/render", json=payload
+            )
         except httpx.HTTPError as e:
             raise ForgeConnectionError(e) from e
 
