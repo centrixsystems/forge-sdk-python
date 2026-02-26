@@ -1,6 +1,7 @@
 """Unit tests for the Forge SDK client."""
 
 from forge_sdk import (
+    BarcodeType,
     DitherMethod,
     Flow,
     ForgeClient,
@@ -157,3 +158,17 @@ def test_enum_values():
     assert Palette.BLACK_WHITE.value == "bw"
     assert Palette.GRAYSCALE.value == "grayscale"
     assert Palette.EINK.value == "eink"
+
+
+def test_barcode_payload():
+    client = ForgeClient("http://localhost:3000")
+    builder = (
+        client.render_html("<h1>Invoice</h1>")
+        .pdf_barcode(BarcodeType.QR, "https://example.com/inv/123")
+        .pdf_watermark_text("DRAFT")
+        .pdf_watermark_pages("first")
+    )
+    payload = builder._build_payload()
+    assert payload["pdf"]["barcodes"][0]["type"] == "qr"
+    assert payload["pdf"]["barcodes"][0]["data"] == "https://example.com/inv/123"
+    assert payload["pdf"]["watermark"]["pages"] == "first"

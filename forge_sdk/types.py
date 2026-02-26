@@ -71,3 +71,22 @@ class EmbedRelationship(str, Enum):
     DATA = "data"
     SOURCE = "source"
     UNSPECIFIED = "unspecified"
+
+
+class BarcodeType(str, Enum):
+    """Barcode type for PDF barcode overlays."""
+
+    QR = "qr"
+    CODE128 = "code128"
+    EAN13 = "ean13"
+    UPCA = "upca"
+    CODE39 = "code39"
+
+
+class BarcodeAnchor(str, Enum):
+    """Anchor position for barcode placement."""
+
+    TOP_LEFT = "top-left"
+    TOP_RIGHT = "top-right"
+    BOTTOM_LEFT = "bottom-left"
+    BOTTOM_RIGHT = "bottom-right"

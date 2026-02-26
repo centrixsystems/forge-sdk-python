@@ -8,6 +8,8 @@ import httpx
 
 from forge_sdk.error import ForgeConnectionError, ForgeServerError
 from forge_sdk.types import (
+    BarcodeAnchor,
+    BarcodeType,
     DitherMethod,
     EmbedRelationship,
     Flow,
@@ -161,6 +163,8 @@ class RenderRequestBuilder:
         self._pdf_watermark_layer: WatermarkLayer | None = None
         self._pdf_standard: PdfStandard | None = None
         self._pdf_embedded_files: list = []
+        self._pdf_watermark_pages: str | None = None
+        self._pdf_barcodes: list = []
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -325,6 +329,49 @@ class RenderRequestBuilder:
         self._pdf_embedded_files.append(entry)
         return self
 
+    def pdf_watermark_pages(self, pages: str) -> RenderRequestBuilder:
+        """Watermark page targeting: 'all', 'first', 'last', or '1,3-5'."""
+        self._pdf_watermark_pages = pages
+        return self
+
+    def pdf_barcode(
+        self,
+        barcode_type: BarcodeType,
+        data: str,
+        *,
+        x: float | None = None,
+        y: float | None = None,
+        width: float | None = None,
+        height: float | None = None,
+        anchor: BarcodeAnchor | None = None,
+        foreground: str | None = None,
+        background: str | None = None,
+        draw_background: bool | None = None,
+        pages: str | None = None,
+    ) -> RenderRequestBuilder:
+        """Add a barcode overlay to the PDF."""
+        entry: dict = {"type": barcode_type.value, "data": data}
+        if x is not None:
+            entry["x"] = x
+        if y is not None:
+            entry["y"] = y
+        if width is not None:
+            entry["width"] = width
+        if height is not None:
+            entry["height"] = height
+        if anchor is not None:
+            entry["anchor"] = anchor.value
+        if foreground is not None:
+            entry["foreground"] = foreground
+        if background is not None:
+            entry["background"] = background
+        if draw_background is not None:
+            entry["draw_background"] = draw_background
+        if pages is not None:
+            entry["pages"] = pages
+        self._pdf_barcodes.append(entry)
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -378,6 +425,7 @@ class RenderRequestBuilder:
             or self._pdf_watermark_font_size is not None
             or self._pdf_watermark_scale is not None
             or self._pdf_watermark_layer is not None
+            or self._pdf_watermark_pages is not None
         )
 
         has_pdf = (
@@ -390,6 +438,7 @@ class RenderRequestBuilder:
             or has_watermark
             or self._pdf_standard is not None
             or len(self._pdf_embedded_files) > 0
+            or len(self._pdf_barcodes) > 0
         )
         if has_pdf:
             p: dict = {}
@@ -427,7 +476,11 @@ class RenderRequestBuilder:
                     wm["scale"] = self._pdf_watermark_scale
                 if self._pdf_watermark_layer is not None:
                     wm["layer"] = self._pdf_watermark_layer.value
+                if self._pdf_watermark_pages is not None:
+                    wm["pages"] = self._pdf_watermark_pages
                 p["watermark"] = wm
+            if self._pdf_barcodes:
+                p["barcodes"] = self._pdf_barcodes
             payload["pdf"] = p
 
         return payload

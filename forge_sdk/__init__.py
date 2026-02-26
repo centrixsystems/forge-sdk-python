@@ -3,6 +3,8 @@
 from forge_sdk.client import ForgeClient, RenderRequestBuilder
 from forge_sdk.error import ForgeConnectionError, ForgeError, ForgeServerError
 from forge_sdk.types import (
+    BarcodeAnchor,
+    BarcodeType,
     DitherMethod,
     EmbedRelationship,
     Flow,
@@ -27,4 +29,6 @@ __all__ = [
     "WatermarkLayer",
     "PdfStandard",
     "EmbedRelationship",
+    "BarcodeType",
+    "BarcodeAnchor",
 ]
