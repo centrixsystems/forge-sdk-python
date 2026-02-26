@@ -9,10 +9,12 @@ import httpx
 from forge_sdk.error import ForgeConnectionError, ForgeServerError
 from forge_sdk.types import (
     DitherMethod,
+    EmbedRelationship,
     Flow,
     Orientation,
     OutputFormat,
     Palette,
+    PdfStandard,
     WatermarkLayer,
 )
 
@@ -157,6 +159,8 @@ class RenderRequestBuilder:
         self._pdf_watermark_font_size: float | None = None
         self._pdf_watermark_scale: float | None = None
         self._pdf_watermark_layer: WatermarkLayer | None = None
+        self._pdf_standard: PdfStandard | None = None
+        self._pdf_embedded_files: list = []
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -296,6 +300,31 @@ class RenderRequestBuilder:
         self._pdf_watermark_layer = l
         return self
 
+    def pdf_standard(self, standard: PdfStandard) -> RenderRequestBuilder:
+        """PDF standard compliance level."""
+        self._pdf_standard = standard
+        return self
+
+    def pdf_attach(
+        self,
+        path: str,
+        data: str,
+        *,
+        mime_type: str | None = None,
+        description: str | None = None,
+        relationship: EmbedRelationship | None = None,
+    ) -> RenderRequestBuilder:
+        """Attach a file to the PDF. Data must be base64-encoded."""
+        entry: dict = {"path": path, "data": data}
+        if mime_type is not None:
+            entry["mime_type"] = mime_type
+        if description is not None:
+            entry["description"] = description
+        if relationship is not None:
+            entry["relationship"] = relationship.value
+        self._pdf_embedded_files.append(entry)
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -359,6 +388,8 @@ class RenderRequestBuilder:
             or self._pdf_creator is not None
             or self._pdf_bookmarks is not None
             or has_watermark
+            or self._pdf_standard is not None
+            or len(self._pdf_embedded_files) > 0
         )
         if has_pdf:
             p: dict = {}
@@ -374,6 +405,10 @@ class RenderRequestBuilder:
                 p["creator"] = self._pdf_creator
             if self._pdf_bookmarks is not None:
                 p["bookmarks"] = self._pdf_bookmarks
+            if self._pdf_standard is not None:
+                p["standard"] = self._pdf_standard.value
+            if self._pdf_embedded_files:
+                p["embedded_files"] = self._pdf_embedded_files
             if has_watermark:
                 wm: dict = {}
                 if self._pdf_watermark_text is not None:

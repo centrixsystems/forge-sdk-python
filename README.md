@@ -131,6 +131,33 @@ pdf = client.render_html("<h1>Draft Report</h1>") \
     .send_sync()
 ```
 
+### PDF/A Compliance & Embedded Files (ZUGFeRD)
+
+Generate PDF/A-3b compliant invoices with embedded XML for e-invoicing standards like ZUGFeRD or Factur-X.
+
+```python
+import base64
+from forge_sdk import PdfStandard, EmbedRelationship
+
+# Read your ZUGFeRD XML invoice data
+with open("zugferd.xml", "rb") as f:
+    xml_b64 = base64.b64encode(f.read()).decode()
+
+pdf = await client.render_html("<h1>Invoice #1234</h1>") \
+    .format(OutputFormat.PDF) \
+    .paper("a4") \
+    .pdf_title("Invoice #1234") \
+    .pdf_standard(PdfStandard.A3B) \
+    .pdf_attach(
+        "factur-x.xml",
+        xml_b64,
+        mime_type="text/xml",
+        description="Factur-X/ZUGFeRD invoice data",
+        relationship=EmbedRelationship.ALTERNATIVE,
+    ) \
+    .send()
+```
+
 ### Health Check
 
 ```python
@@ -210,6 +237,8 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `pdf_watermark_font_size` | `float` | Watermark font size in PDF points (default: auto) |
 | `pdf_watermark_scale` | `float` | Watermark image scale (0.0-1.0, default: 0.5) |
 | `pdf_watermark_layer` | `WatermarkLayer` | Layer position: `OVER` or `UNDER` |
+| `pdf_standard(standard)` | `PdfStandard` | PDF standard: `NONE`, `A2B`, `A3B` |
+| `pdf_attach(path, data, *, mime_type, description, relationship)` | | Embed file in PDF (base64 data) |
 
 ### Enums
 
@@ -221,6 +250,8 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `Palette` | `AUTO`, `BLACK_WHITE`, `GRAYSCALE`, `EINK` |
 | `DitherMethod` | `NONE`, `FLOYD_STEINBERG`, `ATKINSON`, `ORDERED` |
 | `WatermarkLayer` | `OVER`, `UNDER` |
+| `PdfStandard` | `NONE`, `A2B`, `A3B` |
+| `EmbedRelationship` | `ALTERNATIVE`, `SUPPLEMENT`, `DATA`, `SOURCE`, `UNSPECIFIED` |
 
 ### Errors
 

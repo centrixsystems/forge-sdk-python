@@ -53,3 +53,21 @@ class WatermarkLayer(str, Enum):
 
     OVER = "over"
     UNDER = "under"
+
+
+class PdfStandard(str, Enum):
+    """PDF standard compliance level."""
+
+    NONE = "none"
+    A2B = "pdf/a-2b"
+    A3B = "pdf/a-3b"
+
+
+class EmbedRelationship(str, Enum):
+    """Relationship of embedded file to the PDF document."""
+
+    ALTERNATIVE = "alternative"
+    SUPPLEMENT = "supplement"
+    DATA = "data"
+    SOURCE = "source"
+    UNSPECIFIED = "unspecified"

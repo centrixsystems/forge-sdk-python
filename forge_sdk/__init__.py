@@ -4,10 +4,12 @@ from forge_sdk.client import ForgeClient, RenderRequestBuilder
 from forge_sdk.error import ForgeConnectionError, ForgeError, ForgeServerError
 from forge_sdk.types import (
     DitherMethod,
+    EmbedRelationship,
     Flow,
     Orientation,
     OutputFormat,
     Palette,
+    PdfStandard,
     WatermarkLayer,
 )
 
@@ -23,4 +25,6 @@ __all__ = [
     "DitherMethod",
     "Palette",
     "WatermarkLayer",
+    "PdfStandard",
+    "EmbedRelationship",
 ]
