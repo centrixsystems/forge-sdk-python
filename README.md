@@ -2,6 +2,8 @@
 
 Python SDK for the [Forge](https://github.com/centrixsystems/forge) rendering engine. Converts HTML/CSS to PDF, PNG, and other formats via a running Forge server.
 
+Uses [`httpx`](https://www.python-httpx.org/) for both async and sync HTTP. Supports Python 3.9+.
+
 ## Installation
 
 ```sh
@@ -10,38 +12,38 @@ pip install forge-sdk
 
 ## Quick Start
 
+### Async
+
 ```python
 import asyncio
 from forge_sdk import ForgeClient, OutputFormat
 
 async def main():
-    client = ForgeClient("http://localhost:3000")
+    async with ForgeClient("http://localhost:3000") as client:
+        pdf = await client.render_html("<h1>Invoice #1234</h1>") \
+            .format(OutputFormat.PDF) \
+            .paper("a4") \
+            .send()
 
-    pdf = await client.render_html("<h1>Invoice #1234</h1>") \
-        .format(OutputFormat.PDF) \
-        .paper("a4") \
-        .send()
-
-    with open("invoice.pdf", "wb") as f:
-        f.write(pdf)
+        with open("invoice.pdf", "wb") as f:
+            f.write(pdf)
 
 asyncio.run(main())
 ```
 
-## Sync Usage
+### Sync
 
 ```python
 from forge_sdk import ForgeClient, OutputFormat
 
-client = ForgeClient("http://localhost:3000")
+with ForgeClient("http://localhost:3000") as client:
+    pdf = client.render_html("<h1>Invoice #1234</h1>") \
+        .format(OutputFormat.PDF) \
+        .paper("a4") \
+        .send_sync()
 
-pdf = client.render_html("<h1>Invoice #1234</h1>") \
-    .format(OutputFormat.PDF) \
-    .paper("a4") \
-    .send_sync()
-
-with open("invoice.pdf", "wb") as f:
-    f.write(pdf)
+    with open("invoice.pdf", "wb") as f:
+        f.write(pdf)
 ```
 
 ## Usage
@@ -49,6 +51,8 @@ with open("invoice.pdf", "wb") as f:
 ### Render HTML to PDF
 
 ```python
+from forge_sdk import Orientation, Flow
+
 pdf = await client.render_html("<h1>Hello</h1>") \
     .format(OutputFormat.PDF) \
     .paper("a4") \
@@ -65,10 +69,13 @@ png = await client.render_url("https://example.com") \
     .format(OutputFormat.PNG) \
     .width(1280) \
     .height(800) \
+    .density(2.0) \
     .send()
 ```
 
 ### Color Quantization
+
+Reduce colors for e-ink displays or limited-palette output.
 
 ```python
 from forge_sdk import Palette, DitherMethod
@@ -93,9 +100,32 @@ img = await client.render_html("<h1>Brand</h1>") \
 ### Health Check
 
 ```python
+# Async
 healthy = await client.health()
-# or sync:
+
+# Sync
 healthy = client.health_sync()
+```
+
+### Resource Management
+
+`ForgeClient` maintains connection pools internally. Use it as a context manager for automatic cleanup:
+
+```python
+# Async context manager
+async with ForgeClient("http://localhost:3000") as client:
+    pdf = await client.render_html("<h1>Hi</h1>").send()
+
+# Sync context manager
+with ForgeClient("http://localhost:3000") as client:
+    pdf = client.render_html("<h1>Hi</h1>").send_sync()
+
+# Manual cleanup
+client = ForgeClient("http://localhost:3000")
+try:
+    pdf = client.render_html("<h1>Hi</h1>").send_sync()
+finally:
+    client.close()
 ```
 
 ## API Reference
@@ -108,40 +138,54 @@ healthy = client.health_sync()
 | `render_url(url)` | Start a render request from a URL |
 | `health()` | Check server health (async) |
 | `health_sync()` | Check server health (sync) |
+| `close()` | Close underlying HTTP connections (sync) |
+| `aclose()` | Close underlying HTTP connections (async) |
+
+Implements both sync (`with`) and async (`async with`) context manager protocols.
 
 ### `RenderRequestBuilder`
 
-All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()` (sync) to execute.
+All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()` to execute.
 
 | Method | Type | Description |
 |--------|------|-------------|
-| `format` | `OutputFormat` | Output format (default: PDF) |
+| `format` | `OutputFormat` | Output format (default: `PDF`) |
 | `width` | `int` | Viewport width in CSS pixels |
 | `height` | `int` | Viewport height in CSS pixels |
 | `paper` | `str` | Paper size: a3, a4, a5, b4, b5, letter, legal, ledger |
-| `orientation` | `Orientation` | PORTRAIT or LANDSCAPE |
-| `margins` | `str` | Preset (default, none, narrow) or "T,R,B,L" in mm |
-| `flow` | `Flow` | AUTO, PAGINATE, or CONTINUOUS |
+| `orientation` | `Orientation` | `PORTRAIT` or `LANDSCAPE` |
+| `margins` | `str` | Preset (`default`, `none`, `narrow`) or `"T,R,B,L"` in mm |
+| `flow` | `Flow` | `AUTO`, `PAGINATE`, or `CONTINUOUS` |
 | `density` | `float` | Output DPI (default: 96) |
-| `background` | `str` | CSS background color |
+| `background` | `str` | CSS background color (e.g. `"#ffffff"`) |
 | `timeout` | `int` | Page load timeout in seconds |
 | `colors` | `int` | Quantization color count (2-256) |
-| `palette` | `Palette \| list[str]` | Color palette preset or custom hex colors |
+| `palette` | `Palette \| list[str]` | Color palette preset or list of hex strings |
 | `dither` | `DitherMethod` | Dithering algorithm |
 
 ### Enums
 
-- **`OutputFormat`**: PDF, PNG, JPEG, BMP, TGA, QOI, SVG
-- **`Orientation`**: PORTRAIT, LANDSCAPE
-- **`Flow`**: AUTO, PAGINATE, CONTINUOUS
-- **`Palette`**: AUTO, BLACK_WHITE, GRAYSCALE, EINK
-- **`DitherMethod`**: NONE, FLOYD_STEINBERG, ATKINSON, ORDERED
+| Enum | Values |
+|------|--------|
+| `OutputFormat` | `PDF`, `PNG`, `JPEG`, `BMP`, `TGA`, `QOI`, `SVG` |
+| `Orientation` | `PORTRAIT`, `LANDSCAPE` |
+| `Flow` | `AUTO`, `PAGINATE`, `CONTINUOUS` |
+| `Palette` | `AUTO`, `BLACK_WHITE`, `GRAYSCALE`, `EINK` |
+| `DitherMethod` | `NONE`, `FLOYD_STEINBERG`, `ATKINSON`, `ORDERED` |
 
 ### Errors
 
-- **`ForgeError`** — base exception
-- **`ForgeServerError(status, message)`** — 4xx/5xx server responses
-- **`ForgeConnectionError(cause)`** — network/connection failures
+| Exception | Description |
+|-----------|-------------|
+| `ForgeError` | Base exception for all SDK errors |
+| `ForgeServerError` | Server returned 4xx/5xx (has `.status` and `.message`) |
+| `ForgeConnectionError` | Network failure (has `.cause`) |
+
+## Requirements
+
+- Python 3.9+
+- `httpx >= 0.24`
+- A running [Forge](https://github.com/centrixsystems/forge) server
 
 ## License
 
