@@ -46,3 +46,10 @@ class Palette(str, Enum):
     BLACK_WHITE = "bw"
     GRAYSCALE = "grayscale"
     EINK = "eink"
+
+
+class WatermarkLayer(str, Enum):
+    """Watermark layer position."""
+
+    OVER = "over"
+    UNDER = "under"

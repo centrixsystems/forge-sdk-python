@@ -114,6 +114,23 @@ pdf = await client.render_html("<h1>Invoice #1234</h1>") \
     .send()
 ```
 
+### PDF Watermarks
+
+Add text or image watermarks to each page.
+
+```python
+from forge_sdk import WatermarkLayer
+
+pdf = client.render_html("<h1>Draft Report</h1>") \
+    .format(OutputFormat.PDF) \
+    .pdf_watermark_text("DRAFT") \
+    .pdf_watermark_opacity(0.15) \
+    .pdf_watermark_rotation(-45) \
+    .pdf_watermark_color("#888888") \
+    .pdf_watermark_layer(WatermarkLayer.OVER) \
+    .send_sync()
+```
+
 ### Health Check
 
 ```python
@@ -185,6 +202,14 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `pdf_keywords` | `str` | PDF keywords (comma-separated) |
 | `pdf_creator` | `str` | PDF creator tool metadata |
 | `pdf_bookmarks` | `bool` | Enable PDF bookmarks/outline generation |
+| `pdf_watermark_text` | `str` | Watermark text on each page |
+| `pdf_watermark_image` | `str` | Base64-encoded PNG/JPEG watermark image |
+| `pdf_watermark_opacity` | `float` | Watermark opacity (0.0-1.0, default: 0.15) |
+| `pdf_watermark_rotation` | `float` | Watermark rotation in degrees (default: -45) |
+| `pdf_watermark_color` | `str` | Watermark text color as hex (default: #888888) |
+| `pdf_watermark_font_size` | `float` | Watermark font size in PDF points (default: auto) |
+| `pdf_watermark_scale` | `float` | Watermark image scale (0.0-1.0, default: 0.5) |
+| `pdf_watermark_layer` | `WatermarkLayer` | Layer position: `OVER` or `UNDER` |
 
 ### Enums
 
@@ -195,6 +220,7 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `Flow` | `AUTO`, `PAGINATE`, `CONTINUOUS` |
 | `Palette` | `AUTO`, `BLACK_WHITE`, `GRAYSCALE`, `EINK` |
 | `DitherMethod` | `NONE`, `FLOYD_STEINBERG`, `ATKINSON`, `ORDERED` |
+| `WatermarkLayer` | `OVER`, `UNDER` |
 
 ### Errors
 

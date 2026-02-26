@@ -7,7 +7,14 @@ from typing import Sequence, Union
 import httpx
 
 from forge_sdk.error import ForgeConnectionError, ForgeServerError
-from forge_sdk.types import DitherMethod, Flow, Orientation, OutputFormat, Palette
+from forge_sdk.types import (
+    DitherMethod,
+    Flow,
+    Orientation,
+    OutputFormat,
+    Palette,
+    WatermarkLayer,
+)
 
 
 class ForgeClient:
@@ -142,6 +149,14 @@ class RenderRequestBuilder:
         self._pdf_keywords: str | None = None
         self._pdf_creator: str | None = None
         self._pdf_bookmarks: bool | None = None
+        self._pdf_watermark_text: str | None = None
+        self._pdf_watermark_image: str | None = None
+        self._pdf_watermark_opacity: float | None = None
+        self._pdf_watermark_rotation: float | None = None
+        self._pdf_watermark_color: str | None = None
+        self._pdf_watermark_font_size: float | None = None
+        self._pdf_watermark_scale: float | None = None
+        self._pdf_watermark_layer: WatermarkLayer | None = None
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -241,6 +256,46 @@ class RenderRequestBuilder:
         self._pdf_bookmarks = b
         return self
 
+    def pdf_watermark_text(self, t: str) -> RenderRequestBuilder:
+        """Watermark text overlay on each PDF page."""
+        self._pdf_watermark_text = t
+        return self
+
+    def pdf_watermark_image(self, base64_data: str) -> RenderRequestBuilder:
+        """Watermark image (base64-encoded PNG/JPEG)."""
+        self._pdf_watermark_image = base64_data
+        return self
+
+    def pdf_watermark_opacity(self, o: float) -> RenderRequestBuilder:
+        """Watermark opacity (0.0-1.0, default 0.15)."""
+        self._pdf_watermark_opacity = o
+        return self
+
+    def pdf_watermark_rotation(self, d: float) -> RenderRequestBuilder:
+        """Watermark rotation in degrees (default -45)."""
+        self._pdf_watermark_rotation = d
+        return self
+
+    def pdf_watermark_color(self, c: str) -> RenderRequestBuilder:
+        """Watermark text color as hex (default #888888)."""
+        self._pdf_watermark_color = c
+        return self
+
+    def pdf_watermark_font_size(self, s: float) -> RenderRequestBuilder:
+        """Watermark font size in PDF points."""
+        self._pdf_watermark_font_size = s
+        return self
+
+    def pdf_watermark_scale(self, s: float) -> RenderRequestBuilder:
+        """Watermark image scale (0.0-1.0, default 0.5)."""
+        self._pdf_watermark_scale = s
+        return self
+
+    def pdf_watermark_layer(self, l: WatermarkLayer) -> RenderRequestBuilder:
+        """Watermark layer position."""
+        self._pdf_watermark_layer = l
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -285,6 +340,17 @@ class RenderRequestBuilder:
                 q["dither"] = self._dither.value
             payload["quantize"] = q
 
+        has_watermark = (
+            self._pdf_watermark_text is not None
+            or self._pdf_watermark_image is not None
+            or self._pdf_watermark_opacity is not None
+            or self._pdf_watermark_rotation is not None
+            or self._pdf_watermark_color is not None
+            or self._pdf_watermark_font_size is not None
+            or self._pdf_watermark_scale is not None
+            or self._pdf_watermark_layer is not None
+        )
+
         has_pdf = (
             self._pdf_title is not None
             or self._pdf_author is not None
@@ -292,6 +358,7 @@ class RenderRequestBuilder:
             or self._pdf_keywords is not None
             or self._pdf_creator is not None
             or self._pdf_bookmarks is not None
+            or has_watermark
         )
         if has_pdf:
             p: dict = {}
@@ -307,6 +374,25 @@ class RenderRequestBuilder:
                 p["creator"] = self._pdf_creator
             if self._pdf_bookmarks is not None:
                 p["bookmarks"] = self._pdf_bookmarks
+            if has_watermark:
+                wm: dict = {}
+                if self._pdf_watermark_text is not None:
+                    wm["text"] = self._pdf_watermark_text
+                if self._pdf_watermark_image is not None:
+                    wm["image_data"] = self._pdf_watermark_image
+                if self._pdf_watermark_opacity is not None:
+                    wm["opacity"] = self._pdf_watermark_opacity
+                if self._pdf_watermark_rotation is not None:
+                    wm["rotation"] = self._pdf_watermark_rotation
+                if self._pdf_watermark_color is not None:
+                    wm["color"] = self._pdf_watermark_color
+                if self._pdf_watermark_font_size is not None:
+                    wm["font_size"] = self._pdf_watermark_font_size
+                if self._pdf_watermark_scale is not None:
+                    wm["scale"] = self._pdf_watermark_scale
+                if self._pdf_watermark_layer is not None:
+                    wm["layer"] = self._pdf_watermark_layer.value
+                p["watermark"] = wm
             payload["pdf"] = p
 
         return payload

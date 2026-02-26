@@ -2,7 +2,14 @@
 
 from forge_sdk.client import ForgeClient, RenderRequestBuilder
 from forge_sdk.error import ForgeConnectionError, ForgeError, ForgeServerError
-from forge_sdk.types import DitherMethod, Flow, Orientation, OutputFormat, Palette
+from forge_sdk.types import (
+    DitherMethod,
+    Flow,
+    Orientation,
+    OutputFormat,
+    Palette,
+    WatermarkLayer,
+)
 
 __all__ = [
     "ForgeClient",
@@ -15,4 +22,5 @@ __all__ = [
     "Flow",
     "DitherMethod",
     "Palette",
+    "WatermarkLayer",
 ]
