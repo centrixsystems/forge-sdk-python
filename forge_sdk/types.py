@@ -73,6 +73,22 @@ class EmbedRelationship(str, Enum):
     UNSPECIFIED = "unspecified"
 
 
+class PdfMode(str, Enum):
+    """PDF rendering mode."""
+
+    AUTO = "auto"
+    VECTOR = "vector"
+    RASTER = "raster"
+
+
+class AccessibilityLevel(str, Enum):
+    """PDF accessibility compliance level."""
+
+    NONE = "none"
+    BASIC = "basic"
+    PDF_UA_1 = "pdf/ua-1"
+
+
 class BarcodeType(str, Enum):
     """Barcode type for PDF barcode overlays."""
 

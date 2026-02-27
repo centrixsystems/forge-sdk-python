@@ -3,6 +3,7 @@
 from forge_sdk.client import ForgeClient, RenderRequestBuilder
 from forge_sdk.error import ForgeConnectionError, ForgeError, ForgeServerError
 from forge_sdk.types import (
+    AccessibilityLevel,
     BarcodeAnchor,
     BarcodeType,
     DitherMethod,
@@ -11,6 +12,7 @@ from forge_sdk.types import (
     Orientation,
     OutputFormat,
     Palette,
+    PdfMode,
     PdfStandard,
     WatermarkLayer,
 )
@@ -31,4 +33,6 @@ __all__ = [
     "EmbedRelationship",
     "BarcodeType",
     "BarcodeAnchor",
+    "PdfMode",
+    "AccessibilityLevel",
 ]

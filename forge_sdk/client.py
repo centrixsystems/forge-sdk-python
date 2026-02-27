@@ -8,6 +8,7 @@ import httpx
 
 from forge_sdk.error import ForgeConnectionError, ForgeServerError
 from forge_sdk.types import (
+    AccessibilityLevel,
     BarcodeAnchor,
     BarcodeType,
     DitherMethod,
@@ -16,6 +17,7 @@ from forge_sdk.types import (
     Orientation,
     OutputFormat,
     Palette,
+    PdfMode,
     PdfStandard,
     WatermarkLayer,
 )
@@ -153,6 +155,7 @@ class RenderRequestBuilder:
         self._pdf_keywords: str | None = None
         self._pdf_creator: str | None = None
         self._pdf_bookmarks: bool | None = None
+        self._pdf_page_numbers: bool | None = None
         self._pdf_watermark_text: str | None = None
         self._pdf_watermark_image: str | None = None
         self._pdf_watermark_opacity: float | None = None
@@ -165,6 +168,18 @@ class RenderRequestBuilder:
         self._pdf_embedded_files: list = []
         self._pdf_watermark_pages: str | None = None
         self._pdf_barcodes: list = []
+        self._pdf_mode: PdfMode | None = None
+        self._pdf_sign_certificate: str | None = None
+        self._pdf_sign_password: str | None = None
+        self._pdf_sign_name: str | None = None
+        self._pdf_sign_reason: str | None = None
+        self._pdf_sign_location: str | None = None
+        self._pdf_sign_timestamp_url: str | None = None
+        self._pdf_user_password: str | None = None
+        self._pdf_owner_password: str | None = None
+        self._pdf_permissions: str | None = None
+        self._pdf_accessibility: AccessibilityLevel | None = None
+        self._pdf_linearize: bool | None = None
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -262,6 +277,11 @@ class RenderRequestBuilder:
     def pdf_bookmarks(self, b: bool) -> RenderRequestBuilder:
         """Enable or disable PDF bookmarks/outline generation."""
         self._pdf_bookmarks = b
+        return self
+
+    def pdf_page_numbers(self, enabled: bool) -> RenderRequestBuilder:
+        """Enable or disable 'Page X of Y' footers on each PDF page."""
+        self._pdf_page_numbers = enabled
         return self
 
     def pdf_watermark_text(self, t: str) -> RenderRequestBuilder:
@@ -372,6 +392,66 @@ class RenderRequestBuilder:
         self._pdf_barcodes.append(entry)
         return self
 
+    def pdf_mode(self, mode: PdfMode) -> RenderRequestBuilder:
+        """PDF rendering mode: auto, vector, or raster."""
+        self._pdf_mode = mode
+        return self
+
+    def pdf_sign_certificate(self, base64_data: str) -> RenderRequestBuilder:
+        """Digital signature PKCS#12 certificate (base64-encoded)."""
+        self._pdf_sign_certificate = base64_data
+        return self
+
+    def pdf_sign_password(self, password: str) -> RenderRequestBuilder:
+        """Password for the PKCS#12 certificate."""
+        self._pdf_sign_password = password
+        return self
+
+    def pdf_sign_name(self, name: str) -> RenderRequestBuilder:
+        """Signer name for the digital signature."""
+        self._pdf_sign_name = name
+        return self
+
+    def pdf_sign_reason(self, reason: str) -> RenderRequestBuilder:
+        """Reason for the digital signature."""
+        self._pdf_sign_reason = reason
+        return self
+
+    def pdf_sign_location(self, location: str) -> RenderRequestBuilder:
+        """Location for the digital signature."""
+        self._pdf_sign_location = location
+        return self
+
+    def pdf_sign_timestamp_url(self, url: str) -> RenderRequestBuilder:
+        """RFC 3161 timestamp server URL for the digital signature."""
+        self._pdf_sign_timestamp_url = url
+        return self
+
+    def pdf_user_password(self, password: str) -> RenderRequestBuilder:
+        """User password for PDF encryption (required to open)."""
+        self._pdf_user_password = password
+        return self
+
+    def pdf_owner_password(self, password: str) -> RenderRequestBuilder:
+        """Owner password for PDF encryption (required to change permissions)."""
+        self._pdf_owner_password = password
+        return self
+
+    def pdf_permissions(self, permissions: str) -> RenderRequestBuilder:
+        """PDF permissions string (e.g. 'print,copy,edit')."""
+        self._pdf_permissions = permissions
+        return self
+
+    def pdf_accessibility(self, level: AccessibilityLevel) -> RenderRequestBuilder:
+        """PDF accessibility compliance level."""
+        self._pdf_accessibility = level
+        return self
+
+    def pdf_linearize(self, enabled: bool) -> RenderRequestBuilder:
+        """Enable PDF linearization for fast web viewing."""
+        self._pdf_linearize = enabled
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -428,6 +508,21 @@ class RenderRequestBuilder:
             or self._pdf_watermark_pages is not None
         )
 
+        has_signature = (
+            self._pdf_sign_certificate is not None
+            or self._pdf_sign_password is not None
+            or self._pdf_sign_name is not None
+            or self._pdf_sign_reason is not None
+            or self._pdf_sign_location is not None
+            or self._pdf_sign_timestamp_url is not None
+        )
+
+        has_encryption = (
+            self._pdf_user_password is not None
+            or self._pdf_owner_password is not None
+            or self._pdf_permissions is not None
+        )
+
         has_pdf = (
             self._pdf_title is not None
             or self._pdf_author is not None
@@ -435,10 +530,16 @@ class RenderRequestBuilder:
             or self._pdf_keywords is not None
             or self._pdf_creator is not None
             or self._pdf_bookmarks is not None
+            or self._pdf_page_numbers is not None
             or has_watermark
             or self._pdf_standard is not None
             or len(self._pdf_embedded_files) > 0
             or len(self._pdf_barcodes) > 0
+            or self._pdf_mode is not None
+            or has_signature
+            or has_encryption
+            or self._pdf_accessibility is not None
+            or self._pdf_linearize is not None
         )
         if has_pdf:
             p: dict = {}
@@ -454,6 +555,8 @@ class RenderRequestBuilder:
                 p["creator"] = self._pdf_creator
             if self._pdf_bookmarks is not None:
                 p["bookmarks"] = self._pdf_bookmarks
+            if self._pdf_page_numbers is not None:
+                p["page_numbers"] = self._pdf_page_numbers
             if self._pdf_standard is not None:
                 p["standard"] = self._pdf_standard.value
             if self._pdf_embedded_files:
@@ -481,6 +584,36 @@ class RenderRequestBuilder:
                 p["watermark"] = wm
             if self._pdf_barcodes:
                 p["barcodes"] = self._pdf_barcodes
+            if self._pdf_mode is not None:
+                p["mode"] = self._pdf_mode.value
+            if has_signature:
+                sig: dict = {}
+                if self._pdf_sign_certificate is not None:
+                    sig["certificate_data"] = self._pdf_sign_certificate
+                if self._pdf_sign_password is not None:
+                    sig["password"] = self._pdf_sign_password
+                if self._pdf_sign_name is not None:
+                    sig["signer_name"] = self._pdf_sign_name
+                if self._pdf_sign_reason is not None:
+                    sig["reason"] = self._pdf_sign_reason
+                if self._pdf_sign_location is not None:
+                    sig["location"] = self._pdf_sign_location
+                if self._pdf_sign_timestamp_url is not None:
+                    sig["timestamp_url"] = self._pdf_sign_timestamp_url
+                p["signature"] = sig
+            if has_encryption:
+                enc: dict = {}
+                if self._pdf_user_password is not None:
+                    enc["user_password"] = self._pdf_user_password
+                if self._pdf_owner_password is not None:
+                    enc["owner_password"] = self._pdf_owner_password
+                if self._pdf_permissions is not None:
+                    enc["permissions"] = self._pdf_permissions
+                p["encryption"] = enc
+            if self._pdf_accessibility is not None:
+                p["accessibility"] = self._pdf_accessibility.value
+            if self._pdf_linearize is not None:
+                p["linearize"] = self._pdf_linearize
             payload["pdf"] = p
 
         return payload
