@@ -240,6 +240,7 @@ All methods return `self` for chaining. Call `.send()` (async) or `.send_sync()`
 | `pdf_watermark_layer` | `WatermarkLayer` | Layer position: `OVER` or `UNDER` |
 | `pdf_standard(standard)` | `PdfStandard` | PDF standard: `NONE`, `A2B`, `A3B` |
 | `pdf_attach(path, data, *, mime_type, description, relationship)` | | Embed file in PDF (base64 data) |
+| `pdf_lang` | `str` | Document language (BCP 47 tag, e.g. `"en-US"`). Required for PDF/UA-1 |
 
 ### Enums
 

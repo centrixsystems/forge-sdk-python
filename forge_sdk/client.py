@@ -180,6 +180,7 @@ class RenderRequestBuilder:
         self._pdf_permissions: str | None = None
         self._pdf_accessibility: AccessibilityLevel | None = None
         self._pdf_linearize: bool | None = None
+        self._pdf_lang: str | None = None
 
     def format(self, fmt: OutputFormat) -> RenderRequestBuilder:
         """Output format (default: PDF)."""
@@ -452,6 +453,11 @@ class RenderRequestBuilder:
         self._pdf_linearize = enabled
         return self
 
+    def pdf_lang(self, lang: str) -> RenderRequestBuilder:
+        """Document language as a BCP 47 tag (e.g. 'en-US'). Required for PDF/UA-1."""
+        self._pdf_lang = lang
+        return self
+
     def _build_payload(self) -> dict:
         payload: dict = {"format": self._format.value}
 
@@ -540,6 +546,7 @@ class RenderRequestBuilder:
             or has_encryption
             or self._pdf_accessibility is not None
             or self._pdf_linearize is not None
+            or self._pdf_lang is not None
         )
         if has_pdf:
             p: dict = {}
@@ -614,6 +621,8 @@ class RenderRequestBuilder:
                 p["accessibility"] = self._pdf_accessibility.value
             if self._pdf_linearize is not None:
                 p["linearize"] = self._pdf_linearize
+            if self._pdf_lang is not None:
+                p["document_lang"] = self._pdf_lang
             payload["pdf"] = p
 
         return payload
