@@ -19,6 +19,7 @@ from forge_sdk.types import (
     Palette,
     PdfMode,
     PdfStandard,
+    RenderResponse,
     WatermarkLayer,
 )
 
@@ -666,3 +667,45 @@ class RenderRequestBuilder:
             raise ForgeServerError(resp.status_code, message)
 
         return resp.content
+
+    async def send_response(self) -> RenderResponse:
+        """Send the render request and return a RenderResponse with data and warnings (async)."""
+        payload = self._build_payload()
+        try:
+            resp = await self._client._get_async_client().post(
+                f"{self._client._base_url}/render", json=payload
+            )
+        except httpx.HTTPError as e:
+            raise ForgeConnectionError(e) from e
+
+        if resp.status_code != 200:
+            try:
+                body = resp.json()
+                message = body.get("error", f"HTTP {resp.status_code}")
+            except Exception:
+                message = f"HTTP {resp.status_code}"
+            raise ForgeServerError(resp.status_code, message)
+
+        warnings = resp.headers.get_list("x-forge-warning")
+        return RenderResponse(data=resp.content, warnings=warnings)
+
+    def send_response_sync(self) -> RenderResponse:
+        """Send the render request and return a RenderResponse with data and warnings (sync)."""
+        payload = self._build_payload()
+        try:
+            resp = self._client._get_sync_client().post(
+                f"{self._client._base_url}/render", json=payload
+            )
+        except httpx.HTTPError as e:
+            raise ForgeConnectionError(e) from e
+
+        if resp.status_code != 200:
+            try:
+                body = resp.json()
+                message = body.get("error", f"HTTP {resp.status_code}")
+            except Exception:
+                message = f"HTTP {resp.status_code}"
+            raise ForgeServerError(resp.status_code, message)
+
+        warnings = resp.headers.get_list("x-forge-warning")
+        return RenderResponse(data=resp.content, warnings=warnings)

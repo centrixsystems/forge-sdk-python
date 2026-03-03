@@ -14,6 +14,7 @@ from forge_sdk.types import (
     Palette,
     PdfMode,
     PdfStandard,
+    RenderResponse,
     WatermarkLayer,
 )
 
@@ -35,4 +36,5 @@ __all__ = [
     "BarcodeAnchor",
     "PdfMode",
     "AccessibilityLevel",
+    "RenderResponse",
 ]

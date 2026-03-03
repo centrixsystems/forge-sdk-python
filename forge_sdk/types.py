@@ -1,6 +1,17 @@
 """Type definitions for the Forge SDK."""
 
+from dataclasses import dataclass, field
 from enum import Enum
+
+
+@dataclass
+class RenderResponse:
+    """Response from a render request, including any CSS compatibility warnings."""
+
+    data: bytes
+    """The rendered output bytes (PDF, PNG, etc.)."""
+    warnings: list[str] = field(default_factory=list)
+    """CSS compatibility warnings from the Forge server."""
 
 
 class OutputFormat(str, Enum):
